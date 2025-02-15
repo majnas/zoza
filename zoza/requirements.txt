@@ -1,0 +1,6 @@
+openai
+pylint
+pytest
+rich
+icecream
+python-dotenv
