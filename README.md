@@ -16,7 +16,8 @@ This Python package leverages AI to generate videos based on various input forma
 
 Features:
 
-[x] - Accepts images, text, or videos as input
-[ ] - Generates dynamic AI-powered video outputs
-[ ] - Customizable parameters for enhanced creativity
-[ ] - Supports various use cases like animation, style transfer, and scene generation
+
+- [ ] Accepts images, text, or videos as input
+- [ ] Generates dynamic AI-powered video outputs
+- [ ] Customizable parameters for enhanced creativity
+- [ ] Supports various use cases like animation, style transfer, and scene generation
