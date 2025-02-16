@@ -6,6 +6,7 @@ def image_analyzer():
     # model="google/gemini-2.0-flash-thinking-exp:free"
     # model="qwen/qwen-vl-plus:free"
     # model="qwen/qwen2.5-vl-72b-instruct:free"
+    model = "meta-llama/llama-3.2-11b-vision-instruct:free"
     model = "qwen/qwen-vl-plus:free"
     return ImageToText(model)
 

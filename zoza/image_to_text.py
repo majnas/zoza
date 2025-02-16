@@ -23,7 +23,7 @@ class ImageToText:
             api_key=self.api_key,
         )
 
-    def analyze_image(self, image_url: str) -> str:
+    def analyze_image(self, image_url: str, text: str) -> str:
         """
         Analyze an image using the model and return the response.
         :param image_url: URL of the image to analyze.
@@ -40,7 +40,7 @@ class ImageToText:
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "What is in this image?"},
+                        {"type": "text", "text": text},
                         {"type": "image_url", "image_url": {"url": image_url}},
                     ]
                 }

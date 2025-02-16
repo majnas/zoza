@@ -1,8 +1,8 @@
 # Use the official Python image as a base
-FROM python:3.9-slim
+FROM python:3.12-slim
 
 # Install required dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends make
+RUN apt-get update && apt-get install -y --no-install-recommends make git iputils-ping curl
 
 # Set the working directory inside the container
 WORKDIR /app

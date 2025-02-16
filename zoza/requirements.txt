@@ -4,3 +4,5 @@ pytest
 rich
 icecream
 python-dotenv
+meta-ai-api
+python-telegram-bot
