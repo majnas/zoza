@@ -61,7 +61,8 @@ async def process_text(update: Update, text: str) -> None:
     await update.message.reply_text(f"📝 Using text: {text}\nGenerating an image...")
 
     # Run text-to-image
-    result = text_to_image_model(message=f"Imagine: {text}")
+    result = text_to_image_model(message=f"Imagine: Generate an image with following dscription. {text}")
+    logger.info(f"text to image result: {result}")
     
     if not result or "media" not in result or not result.get("media"):
         await update.message.reply_text("❌ Failed to generate an image. Try again.")
