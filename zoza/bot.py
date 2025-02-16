@@ -36,13 +36,10 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     
     image_to_text_format = """
     "Describe the image based on following format."
-    'markdown format: '
     'Image Description: Put long description of the image in here'
-    'Object: Smartphone case'
-    'Color scheme: Purple and green'
-    'Design: Custom-designed for a specific smartphone model'
-    'Features: Cutouts for camera lenses and other phone features'
-    'Background: White surface, possibly a table or shelf'
+    'Object: Put the name of dominant object in image here'
+    'Color scheme: Put color scheme of image here'
+    'Background: Put short description of the image background here'
     """
 
     # Run image-to-text
