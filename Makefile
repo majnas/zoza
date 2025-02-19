@@ -1,4 +1,4 @@
-.PHONY: build install lint test cleanup bilt deploy run_bot
+.PHONY: build install lint test down up deploy
 
 # Load environment variables from .env file
 include .env
