@@ -2,8 +2,6 @@ from meta_ai_api import MetaAI
 from pathlib import Path
 from dotenv import load_dotenv
 import os
-from rich import print
-from icecream import ic
 
 class TextToImage:
     @classmethod
@@ -31,12 +29,11 @@ class TextToImage:
     def __init__(self, ai: MetaAI):
         self.ai = ai
     
-    def __call__(self, message: str):
+    def __call__(self, prompt: str):
         """
         Generate an image based on the given message prompt.
         """
-        response = self.ai.prompt(message=message)
-        return response  # Assuming response is already in JSON format
+        return self.ai.prompt(prompt)
 
 if __name__ == "__main__":
     # Example usage
@@ -50,7 +47,7 @@ if __name__ == "__main__":
     """
     # result {'message': '\n', 'sources': [], 'media': [{'url': '', 'type': 'IMAGE', 'prompt': ''}, {'url': '', 'type': 'IMAGE', 'prompt': ''}]}
 
-    result = text_to_image(message=message)
+    result = text_to_image(prompt=message)
     if result:
         for m in result.get("media", []):
             print(m['url'])

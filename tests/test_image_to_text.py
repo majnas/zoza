@@ -19,6 +19,14 @@ def test_analyze_image(image_analyzer):
     # image_url = "https://raw.githubusercontent.com/majnas/yolov5_opencv_cpp_python/refs/heads/master/data/me_py_pred.png"
     image_url = "https://github.com/majnas/zoza/blob/master/zoza/asset/baby_and_birds.jpg?raw=true"
 
-    response = image_analyzer.analyze_image(image_url)
+    image_to_text_format = """
+    "Describe the image based on following format."
+    'Image Description: Put long description of the image in here'
+    'Object: Put the name of dominant object in image here'
+    'Color scheme: Put color scheme of image here'
+    'Background: Put short description of the image background here'
+    """
+
+    response = image_analyzer.analyze_image(image_url, text=image_to_text_format)
     assert isinstance(response, str)
     assert len(response) > 0

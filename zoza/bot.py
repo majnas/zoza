@@ -4,7 +4,6 @@ from pathlib import Path
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from icecream import ic
 
 from zoza.image_to_text import ImageToText
 from zoza.text_to_image import TextToImage
@@ -32,8 +31,8 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     file = await photo.get_file()
     
     image_url = file.file_path  # Get the direct Telegram file URL
-    logger.info(f"Image received: {image_url}")
-    
+    logger.info("Image received: %s", image_url)
+
     image_to_text_format = """
     "Describe the image based on following format."
     'Image Description: Put long description of the image in here'
@@ -61,9 +60,9 @@ async def process_text(update: Update, text: str) -> None:
     await update.message.reply_text(f"📝 Using text: {text}\nGenerating an image...")
 
     # Run text-to-image
-    result = text_to_image_model(message=f"Imagine: Generate an image with following dscription. {text}")
-    logger.info(f"text to image result: {result}")
-    
+    result = text_to_image_model(prompt=f"Imagine: Generate an image with following dscription. {text}")
+    logger.info("text to image result: %s", result)
+
     if not result or "media" not in result or not result.get("media"):
         await update.message.reply_text("❌ Failed to generate an image. Try again.")
         return

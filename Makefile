@@ -1,4 +1,4 @@
-.PHONY: build install lint test bilt
+.PHONY: build install lint test cleanup bilt deploy run_bot
 
 # Load environment variables from .env file
 include .env
@@ -14,19 +14,21 @@ install:
 	docker exec -it $(CONTAINER_NAME) bash -c "pip install -r zoza/requirements.txt"
 
 lint:
-	docker exec -it $(CONTAINER_NAME) bash -c "pylint --disable=R,C zoza/*.py"
+	docker exec -it $(CONTAINER_NAME) bash -c "pylint --disable=R,C,W0613 zoza/*.py"
 
 test:
 	docker exec -it $(CONTAINER_NAME) bash -c "python -m pytest tests/ -v --cache-clear"
 
-cleanup:
+
+up:
+	docker exec -d $(CONTAINER_NAME) bash -c "supervisord -c /etc/supervisor/conf.d/supervisord.conf"
+	
+
+logs:
+	docker exec -it $(CONTAINER_NAME) tail -f /app/zoza_err.log
+
+down:
 	docker stop $(CONTAINER_NAME) || true
 	docker rm $(CONTAINER_NAME) || true
 
-cbilt:  
-	@echo "Running build, install, lint, and test..."
-	@make -s cleanup
-	@make -s build  
-	@make -s install  
-	@make -s lint  
-	@make -s test
+deploy: down build install lint test up

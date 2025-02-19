@@ -52,6 +52,13 @@ class ImageToText:
 if __name__ == "__main__":
     model_ = "qwen/qwen-vl-plus:free"
     image_url_ = "https://github.com/majnas/zoza/blob/master/zoza/asset/baby_and_birds.jpg?raw=true"
+    image_to_text_format = """
+    "Describe the image based on following format."
+    'Image Description: Put long description of the image in here'
+    'Object: Put the name of dominant object in image here'
+    'Color scheme: Put color scheme of image here'
+    'Background: Put short description of the image background here'
+    """
     analyzer = ImageToText(model_)
-    response = analyzer.analyze_image(image_url_)
+    response = analyzer.analyze_image(image_url_, text=image_to_text_format)
     print(response)
