@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from telegram import InputMediaPhoto
+import aiohttp
+import os
 
 from zoza.image_to_text import ImageToText
 from zoza.text_to_image import TextToImage
@@ -56,57 +58,114 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     text = update.message.text
     await process_text(update, text)
 
-# Process text (either extracted from an image or directly from user input)
+
+
+import aiohttp
+import os
+import subprocess
+from telegram import InputMediaPhoto, InputMediaVideo
+
+async def download_video(video_url: str, filename: str) -> str:
+    """Downloads a video from a URL and saves it locally."""
+    async with aiohttp.ClientSession() as session:
+        async with session.get(video_url) as resp:
+            if resp.status == 200:
+                filepath = f"/tmp/{filename}"  
+                with open(filepath, "wb") as f:
+                    f.write(await resp.read())
+                return filepath
+    return None
+
+async def merge_videos(video_paths: list, output_path: str) -> bool:
+    """Merges multiple videos into one using ffmpeg."""
+    if len(video_paths) < 2:
+        return False  # No need to merge if there's only one video
+
+    list_file = "/tmp/video_list.txt"
+    with open(list_file, "w") as f:
+        for video in video_paths:
+            f.write(f"file '{video}'\n")
+
+    cmd = [
+        "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+        "-i", list_file, "-c", "copy", output_path
+    ]
+    
+    process = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return process.returncode == 0
+
 async def process_text(update: Update, text: str) -> None:
     await update.message.reply_text(f"📝 Using text: {text}\nGenerating media...")
 
-    # Run text-to-image
     result = text_to_image_model(prompt=text)
     logger.info("text to image result: %s", result)
 
-    # Check if result is valid and contains URLs
     if not result or not isinstance(result, tuple) or len(result) != 2:
         await update.message.reply_text("❌ Failed to generate any media. Try again.")
         return
     
     image_urls, video_urls = result
-
-    # Track if any media was successfully sent
     media_sent = False
+    video_paths = []
 
-    # Handle images
+    # Handle Images
     if image_urls:
         await update.message.reply_text("Sending generated images...")
-        
-        # Create a list of InputMediaPhoto objects
-        media_group = [InputMediaPhoto(media=url) for url in image_urls[:4]]  # Limit to 4 images for 2x2 grid
-        
+        media_group = [InputMediaPhoto(media=url) for url in image_urls[:4]]
         try:
-            # Send the media group
             await update.message.reply_media_group(media=media_group)
             media_sent = True
         except Exception as e:
             logger.error(f"Failed to send images: {str(e)}")
             await update.message.reply_text(f"❌ Error sending images: {str(e)}")
-    else:
-        await update.message.reply_text("⚠️ No images were generated.")
 
-    # Handle videos
+    # Handle Videos
     if video_urls:
-        await update.message.reply_text("Sending generated videos...")
-        for video_url in video_urls:
-            try:
-                await update.message.reply_video(video=video_url)
-                media_sent = True
-            except Exception as e:
-                logger.error(f"Failed to send video {video_url}: {str(e)}")
-                await update.message.reply_text(f"❌ Error sending a video: {str(e)}")
-    else:
-        await update.message.reply_text("⚠️ No videos were generated.")
+        await update.message.reply_text("Downloading videos...")
+        for idx, video_url in enumerate(video_urls[:4]):  # Limit to 4 videos
+            video_path = await download_video(video_url, f"video_{idx}.mp4")
+            if video_path:
+                video_paths.append(video_path)
 
-    # If no media was sent successfully
-    if not media_sent and not image_urls and not video_urls:
-        await update.message.reply_text("❌ No media was generated from the text.")
+        if video_paths:
+            await update.message.reply_text("Sending videos as a group...")
+            media_group = []
+            for video_path in video_paths:
+                try:
+                    with open(video_path, "rb") as video_file:
+                        media_group.append(InputMediaVideo(media=video_file))
+                except Exception as e:
+                    logger.error(f"Failed to prepare video: {str(e)}")
+
+            # Send grouped videos
+            if media_group:
+                try:
+                    await update.message.reply_media_group(media=media_group)
+                    media_sent = True
+                except Exception as e:
+                    logger.error(f"Failed to send video group: {str(e)}")
+                    await update.message.reply_text(f"❌ Error sending video group: {str(e)}")
+
+        # Merge videos
+        if len(video_paths) > 1:
+            await update.message.reply_text("Merging videos...")
+            merged_video_path = "/tmp/merged_video.mp4"
+            if await merge_videos(video_paths, merged_video_path):
+                try:
+                    with open(merged_video_path, "rb") as merged_video:
+                        await update.message.reply_video(merged_video)
+                    os.remove(merged_video_path)  # Cleanup
+                except Exception as e:
+                    logger.error(f"Failed to send merged video: {str(e)}")
+                    await update.message.reply_text(f"❌ Error sending merged video: {str(e)}")
+
+        # Cleanup individual videos
+        for video_path in video_paths:
+            os.remove(video_path)
+
+    if not media_sent:
+        await update.message.reply_text("❌ No media was successfully sent.")
+
 
 
 

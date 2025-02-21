@@ -2,7 +2,7 @@
 FROM python:3.12-slim
 
 # Install required dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends make git iputils-ping curl supervisor
+RUN apt-get update && apt-get install -y --no-install-recommends make git iputils-ping curl supervisor ffmpeg
 
 # Set the working directory inside the container
 WORKDIR /app
