@@ -57,20 +57,51 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 # Process text (either extracted from an image or directly from user input)
 async def process_text(update: Update, text: str) -> None:
-    await update.message.reply_text(f"📝 Using text: {text}\nGenerating an image...")
+    await update.message.reply_text(f"📝 Using text: {text}\nGenerating media...")
 
     # Run text-to-image
-    result = text_to_image_model(prompt=f"Imagine: Generate an image with following dscription. {text}")
+    result = text_to_image_model(prompt=text)
     logger.info("text to image result: %s", result)
 
-    if not result or "media" not in result or not result.get("media"):
-        await update.message.reply_text("❌ Failed to generate an image. Try again.")
+    # Check if result is valid and contains URLs
+    if not result or not isinstance(result, tuple) or len(result) != 2:
+        await update.message.reply_text("❌ Failed to generate any media. Try again.")
         return
+    
+    image_urls, video_urls = result
 
-    # Send the generated image
-    for media in result["media"]:
-        image_url = media["url"]
-        await update.message.reply_photo(photo=image_url)
+    # Track if any media was successfully sent
+    media_sent = False
+
+    # Handle images
+    if image_urls:
+        await update.message.reply_text("Sending generated images...")
+        for image_url in image_urls:
+            try:
+                await update.message.reply_photo(photo=image_url)
+                media_sent = True
+            except Exception as e:
+                logger.error(f"Failed to send image {image_url}: {str(e)}")
+                await update.message.reply_text(f"❌ Error sending an image: {str(e)}")
+    else:
+        await update.message.reply_text("⚠️ No images were generated.")
+
+    # Handle videos
+    if video_urls:
+        await update.message.reply_text("Sending generated videos...")
+        for video_url in video_urls:
+            try:
+                await update.message.reply_video(video=video_url)
+                media_sent = True
+            except Exception as e:
+                logger.error(f"Failed to send video {video_url}: {str(e)}")
+                await update.message.reply_text(f"❌ Error sending a video: {str(e)}")
+    else:
+        await update.message.reply_text("⚠️ No videos were generated.")
+
+    # If no media was sent successfully
+    if not media_sent and not image_urls and not video_urls:
+        await update.message.reply_text("❌ No media was generated from the text.")
 
 # Set up bot
 def main() -> None:

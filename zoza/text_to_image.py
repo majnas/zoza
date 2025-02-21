@@ -2,6 +2,7 @@ from meta_ai_api import MetaAI
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+from icecream import ic
 
 class TextToImage:
     @classmethod
@@ -33,8 +34,25 @@ class TextToImage:
         """
         Generate an image based on the given message prompt.
         """
-        print(prompt)
-        return self.ai.prompt(prompt)
+        imagine_prompt = f"Imagine: Generate an image with following dscription. {prompt}"
+        imagine_result = self.ai.prompt(imagine_prompt)
+        # imagine_result {'message': '\n', 'sources': [], 'media': [{'url': '', 'type': 'IMAGE', 'prompt': ''}, {'url': '', 'type': 'IMAGE', 'prompt': ''}]}
+        image_urls = []
+        if imagine_result:
+            for m in imagine_result.get("media", []):
+                if m['type'] == 'IMAGE':
+                    image_urls.append(m['url'])
+
+        animate_prompt = f"Animate: Generate an image with following dscription. {prompt}"
+        animate_result = self.ai.prompt(animate_prompt)
+        video_urls = []
+        if animate_result:
+            for m in animate_result.get("media", []):
+                if m['type'] == 'VIDEO':
+                    video_urls.append(m['url'])
+
+        return image_urls, video_urls
+
 
 if __name__ == "__main__":
     # Example usage
@@ -45,14 +63,14 @@ if __name__ == "__main__":
     Color scheme: The image features a dominant gold color for the dome, with blue and white for the tile work, and red for the flags.
     Background: The background is a clear blue sky, indicating a sunny day.
     """
+
+    # message = """
+    # Imagine: A big ball.
+    # """
     # result {'message': '\n', 'sources': [], 'media': [{'url': '', 'type': 'IMAGE', 'prompt': ''}, {'url': '', 'type': 'IMAGE', 'prompt': ''}]}
 
-    result = text_to_image(prompt=message)
-    if result:
-        for m in result.get("media", []):
-            print(m['url'])
-
-
+    image_urls, video_urls = text_to_image(prompt=message)
+    ic(image_urls, video_urls)
 
 
 
