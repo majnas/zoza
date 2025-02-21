@@ -46,6 +46,8 @@ class ImageToText:
                 }
             ]
         )
+        print("completion", completion)
+        print("completion.choices", completion.choices)
         return completion.choices[0].message.content
 
 # Example Usage
