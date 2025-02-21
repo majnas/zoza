@@ -4,6 +4,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram import InputMediaPhoto
 
 from zoza.image_to_text import ImageToText
 from zoza.text_to_image import TextToImage
@@ -76,13 +77,17 @@ async def process_text(update: Update, text: str) -> None:
     # Handle images
     if image_urls:
         await update.message.reply_text("Sending generated images...")
-        for image_url in image_urls:
-            try:
-                await update.message.reply_photo(photo=image_url)
-                media_sent = True
-            except Exception as e:
-                logger.error(f"Failed to send image {image_url}: {str(e)}")
-                await update.message.reply_text(f"❌ Error sending an image: {str(e)}")
+        
+        # Create a list of InputMediaPhoto objects
+        media_group = [InputMediaPhoto(media=url) for url in image_urls[:4]]  # Limit to 4 images for 2x2 grid
+        
+        try:
+            # Send the media group
+            await update.message.reply_media_group(media=media_group)
+            media_sent = True
+        except Exception as e:
+            logger.error(f"Failed to send images: {str(e)}")
+            await update.message.reply_text(f"❌ Error sending images: {str(e)}")
     else:
         await update.message.reply_text("⚠️ No images were generated.")
 
@@ -102,6 +107,8 @@ async def process_text(update: Update, text: str) -> None:
     # If no media was sent successfully
     if not media_sent and not image_urls and not video_urls:
         await update.message.reply_text("❌ No media was generated from the text.")
+
+
 
 # Set up bot
 def main() -> None:
