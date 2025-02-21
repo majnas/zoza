@@ -22,7 +22,7 @@ class TextToImage:
         
         # Initialize MetaAI with the credentials
         ai = MetaAI(fb_email=fb_email, fb_password=fb_password)
-        
+
         # Return an instance of TextToImage
         return cls(ai)
     
@@ -33,17 +33,17 @@ class TextToImage:
         """
         Generate an image based on the given message prompt.
         """
+        print(prompt)
         return self.ai.prompt(prompt)
 
 if __name__ == "__main__":
     # Example usage
     text_to_image = TextToImage.from_meta()
     message = """
-    Imagine: This image features a heartwarming scene of a baby surrounded by several small birds.
-    In the center of the frame is a baby with a bright, joyful smile, showing a few baby teeth. The baby has fair skin, round cheeks, and dark hair. They are wearing a diaper, suggesting a youthful age. The baby is looking directly forward with a very happy and engaged expression. Their arms are outstretched, and they seem to be gently holding or interacting with one of the birds perched on their hand.
-    Around the baby are six small, white birds with grey wings and yellow beaks. These birds are perched on different parts of the baby: one is on the baby's head, one is on the baby's left shoulder, one on the right shoulder, one on the left hand, one on the right arm, and one near the baby’s right leg. The birds are all facing different directions, some towards the baby and some away. They appear calm and unafraid, adding to the gentle and peaceful atmosphere of the picture.
-    The background is softly blurred, indicating a shallow depth of field which keeps the focus on the baby and the birds. Hints of greenery and out-of-focus pink blossoms suggest an outdoor setting, perhaps a garden or a natural environment. The lighting in the image appears soft and natural, highlighting the baby's and birds' features without harsh shadows.
-    Overall, the image conveys a sense of innocence, joy, and harmony between nature and childhood. The baby's happy expression and the presence of the birds create a tender and delightful scene.
+    Imagine: Generate an image with following dscription. Image Description: The image shows a close-up of a golden dome with intricate patterns and a star at the top. There are three red flags with white text on them, fluttering in the wind. The building has blue and white tile work with arches and Arabic script. An air conditioning unit is visible on the right side of the building.
+    Object: The golden dome with the star at the top.
+    Color scheme: The image features a dominant gold color for the dome, with blue and white for the tile work, and red for the flags.
+    Background: The background is a clear blue sky, indicating a sunny day.
     """
     # result {'message': '\n', 'sources': [], 'media': [{'url': '', 'type': 'IMAGE', 'prompt': ''}, {'url': '', 'type': 'IMAGE', 'prompt': ''}]}
 
