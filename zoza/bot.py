@@ -21,7 +21,9 @@ load_dotenv(dotenv_path=dotenv_path)
 TOKEN = os.getenv("BOT_TOKEN")
 
 # Initialize AI models
-image_to_text_model = ImageToText("qwen/qwen-vl-plus:free")  # Example model
+i2t_model = "qwen/qwen-vl-plus:free"
+# i2t_model = "google/gemini-2.0-flash-thinking-exp:free"
+image_to_text_model = ImageToText(i2t_model)  # Example model
 text_to_image_model = TextToImage.from_meta()
 
 # Start command handler
@@ -42,6 +44,14 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     'Object: Put the name of dominant object in image here'
     'Color scheme: Put color scheme of image here'
     'Background: Put short description of the image background here'
+    """
+
+    image_to_text_format = """
+    "Describe the image in detail using the following format. Strictly follow the template and do not include labels like 'Image Description:', 'Object:', 'Color scheme:', or 'Background:' in your response. Only provide the content for each section as described below."
+    'Put a long and detailed description of the image here, covering all visible elements, actions, and context.'
+    'Put the name of the dominant object(s) in the image here, along with their appearance, position, and notable features.'
+    'Put the overall color scheme of the image here, including dominant colors, contrasts, and any notable color patterns or tones.'
+    'Put a detailed description of the background here, including its setting, elements, and how it relates to the main objects.'
     """
 
     # Run image-to-text
