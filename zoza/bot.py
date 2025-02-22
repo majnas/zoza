@@ -40,7 +40,7 @@ TOKEN = os.getenv("BOT_TOKEN")
 # Initialize AI models
 i2t_model = "qwen/qwen-vl-plus:free"
 image_to_text_model = ImageToText(i2t_model)
-text_to_image_model = TextToImage()
+text_to_image_model = TextToImage.from_meta()
 
 # Define path_to_sound (you might want to adjust this)
 path_to_sound = "./data/16.mp3"  # Add your audio file path here
