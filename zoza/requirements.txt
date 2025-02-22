@@ -6,3 +6,4 @@ icecream
 python-dotenv
 meta-ai-api
 python-telegram-bot
+aiohttp
