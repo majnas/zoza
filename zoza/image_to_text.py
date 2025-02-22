@@ -50,6 +50,14 @@ class ImageToText:
         print("completion.choices", completion.choices)
         return completion.choices[0].message.content
 
+# class ImageToText:
+#     def __init__(self, model: str, api_key_env: str = 'OPENROUTER_API_KEY'):
+#         pass
+
+#     def analyze_image(self, image_url: str, text: str) -> str:
+#         return "Generate an image of a cat dancing with dog."
+
+
 # Example Usage
 if __name__ == "__main__":
     model_ = "qwen/qwen-vl-plus:free"
