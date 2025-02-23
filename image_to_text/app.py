@@ -4,7 +4,7 @@ from typing import Dict
 import os
 from image_to_text import ImageToText
 
-app = FastAPI(title="image_to_text")
+app = FastAPI(title="Image-to-Text API")
 
 SERVICE_NAME = os.getenv("SERVICE_NAME")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -23,7 +23,7 @@ if not OPENROUTER_API_KEY:
 
 image_to_text = ImageToText(model=MODEL_NAME, api_key=OPENROUTER_API_KEY)
 
-@app.post("/invoke")
+@app.post(f"/{SERVICE_NAME}/invoke")
 def invoke(request: ImageRequest) -> Dict[str, str]:
     try:
         result = image_to_text.analyze_image(request.image_url)

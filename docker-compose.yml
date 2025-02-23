@@ -22,3 +22,27 @@ services:
       - ${IMAGE_TO_TEXT_PORT}:8000
     hostname: ${HOSTNAME}
     tty: true
+
+  text_to_image:
+    build:
+      args:
+        - USERNAME=${USERNAME}
+      context: ./text_to_image
+      dockerfile: Dockerfile    
+    container_name: text_to_image_${SOL_SUFFIX}
+    image: text_to_image_${SOL_SUFFIX}
+    restart: always
+    working_dir: /srv/text_to_image
+    command: ./run.sh
+    volumes:
+      - ${PWD}/text_to_image:/srv/text_to_image
+    env_file:
+      - ./text_to_image/.env
+    environment:
+      - USERNAME=${USERNAME}
+      - HOSTNAME=${HOSTNAME}
+      - TZ=Australia/Melbourne
+    ports:
+      - ${TEXT_TO_IMAGE_PORT}:8000
+    hostname: ${HOSTNAME}
+    tty: true
