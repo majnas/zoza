@@ -101,7 +101,8 @@ async def handle_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         image_url = photo_file.file_path
         # Log the image URL
         image_url_logger.info(image_url)
-        extracted_text = image_to_text_model.analyze_image(image_url, text="Generate image")
+
+        extracted_text = image_to_text_model.analyze_image(image_url)
         await update.message.reply_text(f"Extracted text: {extracted_text}")
     else:
         extracted_text = update.message.text
@@ -141,6 +142,7 @@ async def style_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         final_text = f"{extracted_text} Style is Technological"
 
     await query.edit_message_text(f"Prompt: {final_text}")  # Moved here to show prompt before processing
+    print("Running text_to_image_model")
     result = text_to_image_model(prompt=final_text)
 
     # Video processing addition
@@ -149,6 +151,11 @@ async def style_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return ConversationHandler.END
 
     image_urls, video_urls = result
+
+    if not image_urls or not video_urls:
+        await query.edit_message_text("❌ The is no image and video generated!")
+        return ConversationHandler.END
+
     video_paths = []
 
     if video_urls:
@@ -180,6 +187,7 @@ async def custom_style(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     
     final_text = f"{extracted_text} Style is {custom_style}"
     await update.message.reply_text(f"Prompt: {final_text}")
+    print("Running custom_style text_to_image_model")
     result = text_to_image_model(prompt=final_text)
 
     # Video processing addition
@@ -188,6 +196,11 @@ async def custom_style(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         return ConversationHandler.END
 
     image_urls, video_urls = result
+
+    if not image_urls or not video_urls:
+        await update.message.reply_text("❌ The is no image and video generated!")
+        return ConversationHandler.END
+
     video_paths = []
 
     if video_urls:

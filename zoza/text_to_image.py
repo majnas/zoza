@@ -65,11 +65,22 @@ class TextToImage:
 if __name__ == "__main__":
     # Example usage
     text_to_image = TextToImage.from_meta()
+    # message = """
+    # Imagine: Generate an image with following dscription. Image Description: The image shows a close-up of a golden dome with intricate patterns and a star at the top. There are three red flags with white text on them, fluttering in the wind. The building has blue and white tile work with arches and Arabic script. An air conditioning unit is visible on the right side of the building.
+    # Object: The golden dome with the star at the top.
+    # Color scheme: The image features a dominant gold color for the dome, with blue and white for the tile work, and red for the flags.
+    # Background: The background is a clear blue sky, indicating a sunny day.
+    # """
+
     message = """
-    Imagine: Generate an image with following dscription. Image Description: The image shows a close-up of a golden dome with intricate patterns and a star at the top. There are three red flags with white text on them, fluttering in the wind. The building has blue and white tile work with arches and Arabic script. An air conditioning unit is visible on the right side of the building.
-    Object: The golden dome with the star at the top.
-    Color scheme: The image features a dominant gold color for the dome, with blue and white for the tile work, and red for the flags.
-    Background: The background is a clear blue sky, indicating a sunny day.
+    The image shows a baby sitting in a bathtub filled with bubbles. The baby has curly hair and is smiling, with a joyful expression on their face. The background features a patterned wall and some bottles, suggesting a bathroom setting
+    """
+
+    message = """
+    Image Description: The image features a baby sitting on the ground, surrounded by a group of small birds. The baby is smiling broadly, appearing happy and content. The birds are perched on the baby's head, shoulders, and hands, creating a playful and whimsical scene.
+    Object: The dominant object in the image is the baby.
+    Color scheme: The image has a soft, pastel color scheme with shades of white, beige, and light brown. The birds have a mix of white, gray, and black feathers.
+    Background: The background is a blurred, natural setting with hints of greenery and pink flowers, suggesting an outdoor environment, possibly a garden or park.
     """
 
     # message = """
@@ -79,6 +90,7 @@ if __name__ == "__main__":
 
     image_urls, video_urls = text_to_image(prompt=message)
     ic(image_urls, video_urls)
+
 
 
 
