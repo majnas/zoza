@@ -1,26 +1,19 @@
 import os
 from pathlib import Path
 from openai import OpenAI
-from dotenv import load_dotenv
 
 class ImageToText:
-    def __init__(self, model: str, api_key_env: str = 'OPENROUTER_API_KEY'):
+    def __init__(self, model: str, api_key: str = 'OPENROUTER_API_KEY'):
         """
         Initialize the ImageToText with a specific model and API key.
         :param model: The model to use for analysis.
         :param api_key_env: The environment variable storing the API key.
-        """
-        dotenv_path = Path(__file__).resolve().parent.parent / ".env"
-        load_dotenv(dotenv_path=dotenv_path)
-        
-        self.api_key = os.getenv(api_key_env)
-        if not self.api_key:
-            raise ValueError("API key not found in environment variables.")
+        """ 
         
         self.model = model
         self.client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
-            api_key=self.api_key,
+            api_key=api_key,
         )
 
     @property
@@ -66,8 +59,6 @@ class ImageToText:
                 }
             ]
         )
-        print("completion", completion)
-        print("completion.choices", completion.choices)
         return completion.choices[0].message.content
 
 # class ImageToText:

@@ -1,0 +1,24 @@
+services:
+  image_to_text:
+    build:
+      args:
+        - USERNAME=${USERNAME}
+      context: ./image_to_text
+      dockerfile: Dockerfile    
+    container_name: image_to_text_${SOL_SUFFIX}
+    image: image_to_text_${SOL_SUFFIX}
+    restart: always
+    working_dir: /srv/image_to_text
+    command: ./run.sh
+    volumes:
+      - ${PWD}/image_to_text:/srv/image_to_text
+    env_file:
+      - ./image_to_text/.env
+    environment:
+      - USERNAME=${USERNAME}
+      - HOSTNAME=${HOSTNAME}
+      - TZ=Australia/Melbourne
+    ports:
+      - ${IMAGE_TO_TEXT_PORT}:8000
+    hostname: ${HOSTNAME}
+    tty: true
