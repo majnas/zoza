@@ -46,3 +46,27 @@ services:
       - ${TEXT_TO_IMAGE_PORT}:8000
     hostname: ${HOSTNAME}
     tty: true
+
+  zoza:
+    build:
+      args:
+        - USERNAME=${USERNAME}
+      context: ./zoza
+      dockerfile: Dockerfile    
+    container_name: zoza_${SOL_SUFFIX}
+    image: zoza_${SOL_SUFFIX}
+    restart: always
+    working_dir: /srv/zoza
+    command: ./run.sh
+    volumes:
+      - ${PWD}/zoza:/srv/zoza
+    env_file:
+      - ./zoza/.env
+    environment:
+      - USERNAME=${USERNAME}
+      - HOSTNAME=${HOSTNAME}
+      - TZ=Australia/Melbourne
+    ports:
+      - ${ZOZA_PORT}:8000
+    hostname: ${HOSTNAME}
+    tty: true

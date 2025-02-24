@@ -1,7 +1,7 @@
+# bot.py
 import os
+import sys
 import logging
-from pathlib import Path
-from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import (
     Application,
@@ -14,9 +14,7 @@ from telegram.ext import (
 )
 import aiohttp
 import subprocess
-
-from zoza.image_to_text import ImageToText
-from zoza.text_to_image import TextToImage
+import hupper
 
 # Enable logging
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
@@ -33,17 +31,14 @@ fh.setFormatter(formatter)
 image_url_logger.addHandler(fh)
 
 # Load environment variables
-dotenv_path = Path(__file__).resolve().parent.parent / ".env"
-load_dotenv(dotenv_path=dotenv_path)
 TOKEN = os.getenv("BOT_TOKEN")
 
-# Initialize AI models
-i2t_model = "qwen/qwen-vl-plus:free"
-image_to_text_model = ImageToText(i2t_model)
-text_to_image_model = TextToImage.from_meta()
-
 # Define path_to_sound (you might want to adjust this)
-path_to_sound = "./data/16.mp3"  # Add your audio file path here
+path_to_sound = "./asset/music/16.mp3"  # Add your audio file path here
+
+# Define API endpoints using the docker service names and internal ports.
+IMAGE_TO_TEXT_URL = "http://image_to_text:8000/IMAGE_TO_TEXT/invoke"
+TEXT_TO_IMAGE_URL = "http://text_to_image:8000/TEXT_TO_IMAGE/invoke/"
 
 # States for ConversationHandler
 INPUT, STYLE_SELECTION, CUSTOM_STYLE = range(3)
@@ -53,7 +48,7 @@ async def download_video(video_url: str, filename: str) -> str:
     async with aiohttp.ClientSession() as session:
         async with session.get(video_url) as resp:
             if resp.status == 200:
-                filepath = f"/tmp/{filename}"  
+                filepath = f"/tmp/{filename}"
                 with open(filepath, "wb") as f:
                     f.write(await resp.read())
                 return filepath
@@ -101,9 +96,16 @@ async def handle_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         image_url = photo_file.file_path
         # Log the image URL
         image_url_logger.info(image_url)
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                IMAGE_TO_TEXT_URL,
+                json={"image_url": image_url},
+                headers={"accept": "application/json", "Content-Type": "application/json"}
+            ) as resp:
+                data = await resp.json()
+                extracted_text = data.get("description", )
+                image_url_logger.info("extracted_text: %s", extracted_text)
 
-        extracted_text = image_to_text_model.analyze_image(image_url)
-        await update.message.reply_text(f"Extracted text: {extracted_text}")
     else:
         extracted_text = update.message.text
         await update.message.reply_text(f"Received text: {extracted_text}")
@@ -131,7 +133,7 @@ async def style_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if style == "Custom style":
         await query.edit_message_text("Please enter your custom style name:")
         return CUSTOM_STYLE
-    
+
     if style == "Default":
         final_text = extracted_text
     elif style == "Iranian":
@@ -141,19 +143,31 @@ async def style_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     elif style == "Technological":
         final_text = f"{extracted_text} Style is Technological"
 
-    await query.edit_message_text(f"Prompt: {final_text}")  # Moved here to show prompt before processing
-    print("Running text_to_image_model")
-    result = text_to_image_model(prompt=final_text)
+    await query.edit_message_text(f"Prompt: {final_text} \nGenerate media ...")
 
-    # Video processing addition
-    if not result or not isinstance(result, tuple) or len(result) != 2:
+    # Call external TEXT_TO_IMAGE API using the Docker service name.
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            TEXT_TO_IMAGE_URL,
+            json={"prompt": final_text},
+            headers={"accept": "application/json", "Content-Type": "application/json"}
+        ) as resp:
+            result = await resp.json()
+
+    # image_urls = ['https://scontent.fmel3-1.fna.fbcdn.net/o1/v/t0/f2/m340/AQNqTTRNPan-aCnMM4pSRXWavUTf7HIi8jwzuZN-WQnNEP1-gMSBqQFZUCKJOd5ZJZuJcu_dwyi4rXrroZVjEiIDaRFuHt9otKwdpGR-BszROCXSTSHaS_rT4iEptXbRy0BgDlU9qX1hHRRcxiB8nWABgy105Q.jpeg?_nc_ht=scontent.fmel3-1.fna.fbcdn.net&_nc_cat=110&ccb=9-4&oh=00_AYBn5Dvzuu1I1xt3aG9gmB7SUPJTP8oRyeeEw8xzIZqGBQ&oe=67BE50AD&_nc_sid=5b3566', 'https://scontent.fmel3-1.fna.fbcdn.net/o1/v/t0/f2/m340/AQMBuuJwW9RBZC_hTR-JcdliP77tXBFJdSlXj_bVT0G-LwYlp_9y0mFy7E3EteEWdSdnNaBJKCRtV9wTeKz30lpvECoZl-9jdaYhJF0o8qbS1SZbzT43zAz0a5SIE40IeuTkZg2AcfHp0I4yFBLTPEx2METJ.jpeg?_nc_ht=scontent.fmel3-1.fna.fbcdn.net&_nc_cat=104&ccb=9-4&oh=00_AYCboCCG2j26i8Mz2OcDAe-oJwViDcSUnIx_qtjb2uF_VQ&oe=67BE328B&_nc_sid=5b3566', 'https://scontent.fmel3-1.fna.fbcdn.net/o1/v/t0/f2/m340/AQPEXwL7rdoNdDf4buaC8yxqvS7QQViFtrx_lgeH-tCFjysniFUp-QySX_Bopstf5Cv3s14VxWR_B-L2f_jE2CMIULJcHg-9truMAMN0XGcALxyGpZO4hbqNOpIooZKVZvVit9TrRzxuvVybPI7lOciePzlUcg.jpeg?_nc_ht=scontent.fmel3-1.fna.fbcdn.net&_nc_cat=101&ccb=9-4&oh=00_AYBZoaRiBh2zvvIKhP5lhcYGF_UiB9xV9sQxbnz2wu3D6g&oe=67BE4144&_nc_sid=5b3566', 'https://scontent.fmel3-1.fna.fbcdn.net/o1/v/t0/f2/m340/AQP9G8arAZhiebTZWONMPXZ2yaIXnGw0P3sdV2HCKtyfFNqbu7MUii9G5pXaB80yF_lIlQ-KDnxu1czl2c5PUXd3Iq-E29Vd8m_4uus1w3g9xKIhpreBh9yon_16CMa3a25lk1jnFIsp5PSrfIUYLYraaK7EHA.jpeg?_nc_ht=scontent.fmel3-1.fna.fbcdn.net&_nc_cat=109&ccb=9-4&oh=00_AYC6B2WTWL0t1VdKw5jzgruFKgedFlG-h541tkFr9FdC9A&oe=67BE30F4&_nc_sid=5b3566']
+    # video_urls = ['https://scontent.fmel3-1.fna.fbcdn.net/o1/v/t0/f2/m256/AQNagCN6NcaM_uJfbnBdNnJCf6Ap9vtBd5w5Yy1syK__yBa3adfMdADiv05kXvph9Eq8NSuqVz5d_N_sq6gvHufaBFC3534qoaT1QeFrbnK72EEM1eOyGq7RA26XMyLO.mp4?_nc_ht=scontent.fmel3-1.fna.fbcdn.net&_nc_cat=100&ccb=9-4&oh=00_AYAl3ORs5gOppPTLKAiaw7B73RHDCH0d2yhgSr25WJWcZA&oe=67BE1B1A&_nc_sid=5b3566', 'https://scontent.fmel3-1.fna.fbcdn.net/o1/v/t0/f2/m249/AQNcYRK3UbuH6zIgksdPac4Gdoj32zjsKYPcXTy50ciZ7Wok-DSMxpQGkyyGQsa_rnBecEbqyqosbgg96rInhBbK85yuQzwxHsoK9A15iFw1N-7-wGZ0xempfxivpTA9.mp4?_nc_ht=scontent.fmel3-1.fna.fbcdn.net&_nc_cat=103&ccb=9-4&oh=00_AYBNmwoxvKoRQp1au9IiCCuziEf3eQo17qTjZQjbE4vZYg&oe=67BE2123&_nc_sid=5b3566', 'https://scontent.fmel3-1.fna.fbcdn.net/o1/v/t0/f2/m251/AQMUlyhuZoM-c91t_BdnLF-nFDXMOxHjGzD4VyRMLtfdz2IRfoKLyXZIbCa_yjliCC_89NUoHcoEH2wuVnc9JhUC9o0pigDZ2lwLoTM3usJ5t7-5rlGop8wrr9Sb-yGL.mp4?_nc_ht=scontent.fmel3-1.fna.fbcdn.net&_nc_cat=109&ccb=9-4&oh=00_AYB7KbW4Ss99hiqnX9Cv1Ey5DOsNskx5Fy0RFIbX9nzlDg&oe=67BE2D59&_nc_sid=5b3566', 'https://scontent.fmel3-1.fna.fbcdn.net/o1/v/t0/f2/m338/AQMSN47XiN6CSeNG-lyhLYF1WPJjyly_42K_wF-FXuHJaZ7cM84UbVPEySZsq3ymQcj-jESQ_elLFIr6xUHDYfPs8F16qxcOyuqSZvDP64zLPviHL383rZDpCv6o72gt.mp4?_nc_ht=scontent.fmel3-1.fna.fbcdn.net&_nc_cat=111&ccb=9-4&oh=00_AYBr3toeaPy1ggiQo_QCsVxwSYR4WiP4LO6kida57V-ddg&oe=67BE3293&_nc_sid=5b3566']
+
+    # result = {"image_urls": image_urls, "video_urls": video_urls}
+
+    if not result or "image_urls" not in result or "video_urls" not in result:
         await query.edit_message_text("❌ Failed to generate any media. Try again.")
-        return ConversationHandler.END
+        return ConversationHandler.END  
 
-    image_urls, video_urls = result
+    image_urls = result.get("image_urls")
+    video_urls = result.get("video_urls")
 
     if not image_urls or not video_urls:
-        await query.edit_message_text("❌ The is no image and video generated!")
+        await query.edit_message_text("❌ There is no image and video generated!")
         return ConversationHandler.END
 
     video_paths = []
@@ -169,6 +183,7 @@ async def style_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             merged_video_path = "/tmp/merged_video.mp4"
             merged_with_audio_path = "/tmp/merged_with_audio.mp4"
 
+            await query.edit_message_text("Merge videos...")
             if await merge_videos(video_paths, merged_video_path):
                 if await add_audio_to_video(merged_video_path, merged_with_audio_path, path_to_sound):
                     with open(merged_with_audio_path, "rb") as merged_video:
@@ -178,7 +193,6 @@ async def style_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
         for video_path in video_paths:
             os.remove(video_path)
-
     return ConversationHandler.END
 
 async def custom_style(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -186,19 +200,26 @@ async def custom_style(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     extracted_text = context.user_data['extracted_text']
     
     final_text = f"{extracted_text} Style is {custom_style}"
-    await update.message.reply_text(f"Prompt: {final_text}")
-    print("Running custom_style text_to_image_model")
-    result = text_to_image_model(prompt=final_text)
+    await update.message.reply_text(f"Prompt: {final_text} \nGenerate media ...")
 
-    # Video processing addition
-    if not result or not isinstance(result, tuple) or len(result) != 2:
+    # Call external TEXT_TO_IMAGE API using the Docker service name.
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            TEXT_TO_IMAGE_URL,
+            json={"prompt": final_text},
+            headers={"accept": "application/json", "Content-Type": "application/json"}
+        ) as resp:
+            result = await resp.json()
+
+    if not result or "image_urls" not in result or "video_urls" not in result:
         await update.message.reply_text("❌ Failed to generate any media. Try again.")
         return ConversationHandler.END
 
-    image_urls, video_urls = result
+    image_urls = result.get("image_urls")
+    video_urls = result.get("video_urls")
 
     if not image_urls or not video_urls:
-        await update.message.reply_text("❌ The is no image and video generated!")
+        await update.message.reply_text("❌ There is no image and video generated!")
         return ConversationHandler.END
 
     video_paths = []
@@ -267,4 +288,6 @@ def main() -> None:
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
+    # Start the hupper reloader
+    reloader = hupper.start_reloader('bot.main')    
     main()

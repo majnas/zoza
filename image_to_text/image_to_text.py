@@ -14,7 +14,7 @@ class ImageToText:
         self.client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=api_key,
-        )
+        )        
 
     @property
     def image_to_text_format(self):
@@ -41,7 +41,6 @@ class ImageToText:
         :param image_url: URL of the image to analyze.
         :return: Model's response describing the image.
         """
-        print(self.image_to_text_format)
         completion = self.client.chat.completions.create(
             extra_headers={
                 "HTTP-Referer": "<YOUR_SITE_URL>",  # Optional
