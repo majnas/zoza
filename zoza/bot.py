@@ -35,12 +35,13 @@ TOKEN = os.getenv("BOT_TOKEN")
 # Define path_to_sound (you might want to adjust this)
 path_to_sound = "./asset/music/16.mp3"  # Add your audio file path here
 
-# Define API endpoints using the docker service names and internal ports.
+# Define API endpoints using the docker service names and internal ports
 IMAGE_TO_TEXT_URL = "http://image_to_text:8000/IMAGE_TO_TEXT/invoke"
 TEXT_TO_IMAGE_URL = "http://text_to_image:8000/TEXT_TO_IMAGE/invoke/"
+IMAGE_TO_TEXT_WAN_URL = "http://image_to_text:8000/IMAGE_TO_TEXT/generate-bash"
 
 # States for ConversationHandler
-INPUT, STYLE_SELECTION, CUSTOM_STYLE = range(3)
+INPUT, STYLE_SELECTION, CUSTOM_STYLE, WANCMD_WAITING = range(4)
 
 # Download video from URL
 async def download_video(video_url: str, filename: str) -> str:
@@ -93,7 +94,6 @@ async def handle_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     if update.message.photo:
         photo_file = await update.message.photo[-1].get_file()
         image_url = photo_file.file_path
-        # Log the image URL
         logger.info(image_url)
         async with aiohttp.ClientSession() as session:
             async with session.post(
@@ -142,10 +142,8 @@ async def style_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     elif style == "Technological":
         final_text = f"{extracted_text} Style is Technological"
 
-    # Added emoji to indicate process is underway
     await query.edit_message_text(f"Prompt: {final_text} \n⏳ Generate media ...")
 
-    # Call external TEXT_TO_IMAGE API using the Docker service name.
     async with aiohttp.ClientSession() as session:
         async with session.post(
             TEXT_TO_IMAGE_URL,
@@ -170,7 +168,6 @@ async def style_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     video_paths = []
 
     if video_urls:
-        # Added emoji before "Downloading videos..."
         await query.edit_message_text("⏳ Downloading videos...")
         for idx, video_url in enumerate(video_urls[:4]):  # Limiting to 4 videos
             video_path = await download_video(video_url, f"video_{idx}.mp4")
@@ -181,7 +178,6 @@ async def style_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             merged_video_path = "/tmp/merged_video.mp4"
             merged_with_audio_path = "/tmp/merged_with_audio.mp4"
 
-            # Added emoji before "Merge videos..."
             await query.edit_message_text("⏳ Merge videos...")
             if await merge_videos(video_paths, merged_video_path):
                 if await add_audio_to_video(merged_video_path, merged_with_audio_path, path_to_sound):
@@ -199,10 +195,8 @@ async def custom_style(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     extracted_text = context.user_data['extracted_text']
     
     final_text = f"{extracted_text} Style is {custom_style}"
-    # Added emoji to indicate process is underway
     await update.message.reply_text(f"Prompt: {final_text} \n⏳ Generate media ...")
 
-    # Call external TEXT_TO_IMAGE API using the Docker service name.
     async with aiohttp.ClientSession() as session:
         async with session.post(
             TEXT_TO_IMAGE_URL,
@@ -225,7 +219,6 @@ async def custom_style(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     video_paths = []
 
     if video_urls:
-        # Added emoji before "Downloading videos..."
         await update.message.reply_text("⏳ Downloading videos...")
         for idx, video_url in enumerate(video_urls[:4]):
             video_path = await download_video(video_url, f"video_{idx}.mp4")
@@ -249,8 +242,58 @@ async def custom_style(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
     return ConversationHandler.END
 
+async def wancmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    logger.info("Starting /wancmd command processing")
+    await update.message.reply_text("Please send an image to process with /wancmd")
+    context.user_data['waiting_for_wancmd_image'] = True
+    return WANCMD_WAITING
+
+async def wancmd_process_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:    
+    if not context.user_data.get('waiting_for_wancmd_image', False):
+        logger.info("Not in WANCMD_WAITING state, ignoring message")
+        return ConversationHandler.END
+
+    if update.message.photo:
+        photo_file = await update.message.photo[-1].get_file()
+        image_url = photo_file.file_path
+        logger.info(f"Received image URL: {image_url}")
+        
+        await update.message.reply_text("⏳ Processing image with /wancmd...")
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                logger.info(f"Sending POST request to {IMAGE_TO_TEXT_WAN_URL}")
+                
+                async with session.post(
+                    IMAGE_TO_TEXT_WAN_URL,
+                    json={"image_url": image_url},
+                    headers={"accept": "application/json", "Content-Type": "application/json"}
+                ) as resp:
+                    logger.info(f"Response status: {resp.status}")
+                    
+                    if resp.status == 200:
+                        data = await resp.json()
+                        # Changed from "description" to "bash_command"
+                        response_text = data.get("bash_command", "No bash command available")
+                        logger.info(f"Extracted response_text: \n{response_text}")
+                        await update.message.reply_text(f"{response_text}")
+                    else:
+                        logger.error(f"API request failed with status {resp.status}")
+                        await update.message.reply_text(f"❌ Failed to process image (HTTP {resp.status})")
+        except Exception as e:
+            logger.error(f"Error in wancmd_process_image: {str(e)}", exc_info=True)
+            await update.message.reply_text(f"❌ Error processing image: {str(e)}")
+    else:
+        logger.info("No photo in message")
+        await update.message.reply_text("Please send an image to process with /wancmd")
+
+    # Reset the state
+    context.user_data['waiting_for_wancmd_image'] = False
+    return ConversationHandler.END
+
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text("Operation cancelled.")
+    context.user_data['waiting_for_wancmd_image'] = False
     return ConversationHandler.END
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -258,7 +301,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "Available commands:\n"
         "/start - Start generating images\n"
         "/help - Show this help message\n"
-        "/cancel - Cancel current operation"
+        "/cancel - Cancel current operation\n"
+        "/wancmd - Generate bash response from image"
     )
     await update.message.reply_text(help_text)
 
@@ -266,7 +310,8 @@ async def set_bot_commands(application: Application) -> None:
     commands = [
         BotCommand("start", "Start generating images"),
         BotCommand("help", "Show help information"),
-        BotCommand("cancel", "Cancel current operation")
+        BotCommand("cancel", "Cancel current operation"),
+        BotCommand("wancmd", "Generate bash response from image")
     ]
     await application.bot.set_my_commands(commands)
 
@@ -274,11 +319,15 @@ def main() -> None:
     application = Application.builder().token(TOKEN).build()
 
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
+        entry_points=[
+            CommandHandler("start", start),
+            CommandHandler("wancmd", wancmd_start)
+        ],
         states={
             INPUT: [MessageHandler(filters.PHOTO | filters.TEXT & ~filters.COMMAND, handle_input)],
             STYLE_SELECTION: [CallbackQueryHandler(style_selection)],
             CUSTOM_STYLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, custom_style)],
+            WANCMD_WAITING: [MessageHandler(filters.PHOTO | filters.TEXT & ~filters.COMMAND, wancmd_process_image)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )

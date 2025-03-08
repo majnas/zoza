@@ -1,25 +1,25 @@
-from langchain_openai import ChatOpenAI
-from langchain.schema import HumanMessage
+from openai import OpenAI
 import os
 
 class ImageToTextWan:
-    def __init__(self, model: str, api_key: str = 'OPENROUTER_API_KEY'):
+    def __init__(self, model: str, api_key: str = 'OPENAI_API_KEY'):
         """
         Initialize the ImageToTextWan class with a specified model and API key.
         
         Args:
             model (str): The OpenAI model to use (e.g., 'gpt-4o-mini').
-            api_key (str): The API key for authentication. Defaults to 'OPENROUTER_API_KEY'.
-                          If set to 'OPENROUTER_API_KEY', it will try to fetch from environment variables.
+            api_key (str): The API key for authentication. Defaults to 'OPENAI_API_KEY'.
+                          If set to 'OPENAI_API_KEY', it will try to fetch from environment variables.
         """
-        if api_key == 'OPENROUTER_API_KEY':
-            self.api_key = os.getenv('OPENROUTER_API_KEY') or os.getenv('OPENAI_API_KEY')
+        if api_key == 'OPENAI_API_KEY':
+            self.api_key = os.getenv('OPENAI_API_KEY')
             if not self.api_key:
                 raise ValueError("API key not provided and not found in environment variables.")
         else:
             self.api_key = api_key
         
-        self.model = ChatOpenAI(model=model, api_key=self.api_key)
+        self.model = model  # Store model name as string
+        self.client = OpenAI(api_key=self.api_key)  # Initialize OpenAI client
 
     @property
     def image_to_text_format(self):
@@ -47,15 +47,24 @@ class ImageToTextWan:
         if prompt is None:
             prompt = self.image_to_text_format
 
-        message = HumanMessage(
-            content=[
-                {"type": "text", "text": prompt},
-                {"type": "image_url", "image_url": {"url": image_url}}
-            ]
-        )
+        # Prepare the message content in the format expected by OpenAI API
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": image_url}}
+                ]
+            }
+        ]
+        
         try:
-            response = self.model.invoke([message])
-            return response.content
+            # Call the OpenAI API directly
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages
+            )
+            return response.choices[0].message.content
         except Exception as e:
             raise Exception(f"Error generating text from image URL: {e}")
 
@@ -85,7 +94,7 @@ class ImageToTextWan:
             f"for i in {{1..10}}; do torchrun --nproc_per_node=4 generate.py "
             f"--task i2v-14B --size \"832*480\" --ckpt_dir ./Wan2.1-I2V-14B-480P "
             f"--image i2v_${{unique_id}}/image.jpg --dit_fsdp --t5_fsdp --ulysses_size 4 "
-            f"--save_file kidcat/${{i}}.mp4 --prompt \"{escaped_prompt}\"; done"
+            f"--save_file i2v_${{unique_id}}/${{i}}.mp4 --prompt \"{escaped_prompt}\"; done"
         )
         
         return cmd
@@ -94,7 +103,7 @@ class ImageToTextWan:
 if __name__ == "__main__":
     try:
         converter = ImageToTextWan(model="gpt-4o-mini")
-        image_url = "https://example.com/images/man.jpg"
+        image_url = "https://raw.githubusercontent.com/majnas/zoza/refs/heads/master/image_to_text/asset/baby_and_birds.jpg"
         
         # Using default prompt
         bash_cmd_default = converter.generate_bash_cmd(image_url)
