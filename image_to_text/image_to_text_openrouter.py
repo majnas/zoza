@@ -2,14 +2,16 @@ import os
 from pathlib import Path
 from openai import OpenAI
 
-class ImageToText:
-    def __init__(self, model: str, api_key: str = 'OPENROUTER_API_KEY'):
+class ImageToTextOpenRouter:
+    def __init__(self, model: str, api_key: str):
         """
         Initialize the ImageToText with a specific model and API key.
         :param model: The model to use for analysis.
         :param api_key_env: The environment variable storing the API key.
         """ 
-        
+        if not api_key:
+            raise ValueError("API key not provided and not found in environment variables.")
+
         self.model = model
         self.client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
@@ -60,18 +62,11 @@ class ImageToText:
         )
         return completion.choices[0].message.content
 
-# class ImageToText:
-#     def __init__(self, model: str, api_key_env: str = 'OPENROUTER_API_KEY'):
-#         pass
-
-#     def analyze_image(self, image_url: str, text: str) -> str:
-#         return "Generate an image of a cat dancing with dog."
-
 
 # Example Usage
 if __name__ == "__main__":
     model_ = "qwen/qwen-vl-plus:free"
-    image_url_ = "https://github.com/majnas/zoza/blob/master/zoza/asset/baby_and_birds.jpg?raw=true"
-    analyzer = ImageToText(model_)
+    image_url_ = "https://raw.githubusercontent.com/majnas/zoza/refs/heads/master/image_to_text/asset/baby_and_birds.jpg"
+    analyzer = ImageToTextOpenRouter(model_)
     response = analyzer.analyze_image(image_url_)
     print(response)

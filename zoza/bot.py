@@ -38,7 +38,7 @@ path_to_sound = "./asset/music/16.mp3"  # Add your audio file path here
 # Define API endpoints using the docker service names and internal ports
 IMAGE_TO_TEXT_URL = "http://image_to_text:8000/IMAGE_TO_TEXT/invoke"
 TEXT_TO_IMAGE_URL = "http://text_to_image:8000/TEXT_TO_IMAGE/invoke/"
-IMAGE_TO_TEXT_WAN_URL = "http://image_to_text:8000/IMAGE_TO_TEXT/generate-bash"
+IMAGE_TO_TEXT_WAN_URL = "http://image_to_text:8000/IMAGE_TO_TEXT/generate_wan_cmd"
 
 # States for ConversationHandler
 INPUT, STYLE_SELECTION, CUSTOM_STYLE, WANCMD_WAITING = range(4)
@@ -266,7 +266,7 @@ async def wancmd_process_image(update: Update, context: ContextTypes.DEFAULT_TYP
                 
                 async with session.post(
                     IMAGE_TO_TEXT_WAN_URL,
-                    json={"image_url": image_url},
+                    json={"image_url_list": [image_url], "engine": "OpenAI"},
                     headers={"accept": "application/json", "Content-Type": "application/json"}
                 ) as resp:
                     logger.info(f"Response status: {resp.status}")
@@ -279,7 +279,8 @@ async def wancmd_process_image(update: Update, context: ContextTypes.DEFAULT_TYP
                         await update.message.reply_text(f"{response_text}")
                     else:
                         logger.error(f"API request failed with status {resp.status}")
-                        await update.message.reply_text(f"❌ Failed to process image (HTTP {resp.status})")
+                        logger.error(f"API request failed with status {resp}")
+                        await update.message.reply_text(f"❌ Failed to process image (HTTP {resp.status}) {resp}")
         except Exception as e:
             logger.error(f"Error in wancmd_process_image: {str(e)}", exc_info=True)
             await update.message.reply_text(f"❌ Error processing image: {str(e)}")
