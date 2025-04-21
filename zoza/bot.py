@@ -14,6 +14,9 @@ from telegram.ext import (
 import aiohttp
 import subprocess
 import hupper
+from wan_cmd_generator import WanCmdGenerator
+import tempfile
+from pathlib import Path
 
 # Enable logging
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
@@ -259,31 +262,26 @@ async def wancmd_process_image(update: Update, context: ContextTypes.DEFAULT_TYP
         logger.info(f"Received image URL: {image_url}")
         
         await update.message.reply_text("⏳ Processing image with /wancmd...")
-        
         try:
-            async with aiohttp.ClientSession() as session:
-                logger.info(f"Sending POST request to {IMAGE_TO_TEXT_WAN_URL}")
-                
-                async with session.post(
-                    IMAGE_TO_TEXT_WAN_URL,
-                    json={"image_url_list": [image_url], "engine": "OpenAI"},
-                    headers={"accept": "application/json", "Content-Type": "application/json"}
-                ) as resp:
-                    logger.info(f"Response status: {resp.status}")
-                    
-                    if resp.status == 200:
-                        data = await resp.json()
-                        # Changed from "description" to "bash_command"
-                        response_text = data.get("bash_command", "No bash command available")
-                        logger.info(f"Extracted response_text: \n{response_text}")
-                        await update.message.reply_text(f"{response_text}")
-                    else:
-                        logger.error(f"API request failed with status {resp.status}")
-                        logger.error(f"API request failed with status {resp}")
-                        await update.message.reply_text(f"❌ Failed to process image (HTTP {resp.status}) {resp}")
+            # Replace external service call with local generator
+            response_text = WanCmdGenerator().generate_bash_cmd(image_url)
+            logger.info(f"Generated response_text:\n{response_text}")
+
+            # … after you get response_text …
+            with tempfile.NamedTemporaryFile('w', suffix='.txt', delete=False) as tf:
+                tf.write(response_text)
+                tmp_path = Path(tf.name)
+
+            with open(tmp_path, 'rb') as f:
+                await update.message.reply_document(document=f,
+                                                    filename='wancmd.txt',
+                                                    caption="Here's your generated script.")
+            # optionally: tmp_path.unlink()
+
+            # await update.message.reply_text(response_text)
         except Exception as e:
-            logger.error(f"Error in wancmd_process_image: {str(e)}", exc_info=True)
-            await update.message.reply_text(f"❌ Error processing image: {str(e)}")
+            logger.error(f"Error generating bash command: {e}", exc_info=True)
+            await update.message.reply_text(f"❌ Error generating bash command: {e}")        
     else:
         logger.info("No photo in message")
         await update.message.reply_text("Please send an image to process with /wancmd")

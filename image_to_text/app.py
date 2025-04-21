@@ -6,7 +6,7 @@ import requests
 
 from image_to_text_openrouter import ImageToTextOpenRouter
 from image_to_text_ollama import ImageToTextOllama
-from image_to_txet_openai import ImageToTextOpenAI
+from image_to_text_openai import ImageToTextOpenAI
 from wan_cmd_generator import WanCmdGenerator
 import utils
 
@@ -42,7 +42,8 @@ image_to_text_openai = ImageToTextOpenAI(model=OPENAI_MODEL_NAME, api_key=OPENAI
 def invoke(request: ImageRequest) -> Dict[str, str]:
     try:
         if request.engine == "OpenAI":
-            result = image_to_text_openai.analyze_image(request.image_url)
+            action_list = ["The person in image is smiling and while looking at camera winking."]
+            result = image_to_text_openai.analyze_image(request.image_url, action_list)
         elif request.engine == "OpenRouter":
             result = image_to_text_openrouter.analyze_image(request.image_url)
         elif request.engine == "Ollama":
