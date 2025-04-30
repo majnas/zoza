@@ -1,10 +1,9 @@
 import os
-import numpy as np
-import torch
+# import numpy as np
+# import torch
 from bark import SAMPLE_RATE, generate_audio
 from scipy.io.wavfile import write as write_wav
 # from pydub import AudioSegment
-import os
 
 debate = [
     ("moderator", "[calm] Gentlemen, thank you for joining us tonight. This isn’t just a territorial dispute; the future of global security hinges on Crimea. President Putin, on what grounds do you claim Crimea is part of Russia?"),
