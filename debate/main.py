@@ -1,8 +1,7 @@
 import os
-# import numpy as np
-# import torch
-from bark import SAMPLE_RATE, generate_audio
+from bark import SAMPLE_RATE, generate_audio, preload_models
 from scipy.io.wavfile import write as write_wav
+
 # from pydub import AudioSegment
 
 debate = [
@@ -31,19 +30,16 @@ debate = [
 ]
 
 SPEAKER_PRESETS = {
-    "putin": "ru_speaker_2",     
-    "zelensky": "ru_speaker_7",   
-    "moderator": "en_speaker_6"   
+    "putin": "v2/ru_speaker_1",
+    "zelensky": "v2/ru_speaker_6",
+    "moderator": "v2/en_speaker_1"   
 }
 
 os.makedirs("debate_wav", exist_ok=True)
 
 for i, (speaker, text) in enumerate(debate):
     preset = SPEAKER_PRESETS[speaker]
-    audio_array = generate_audio(
-        text,
-        history_prompt=preset,
-    )
+    audio_array = generate_audio(text, history_prompt=preset)
     fname = f"debate_wav/{i:02d}_{speaker}.wav"
     write_wav(fname, SAMPLE_RATE, audio_array)
     print(f"Saved: {fname}")
@@ -65,3 +61,6 @@ print("All segments generated with emotional cues! You can concatenate WAV files
 # combined.export(output_path, format="wav")
 # print(f"Combined file saved as: {output_path}")
 
+
+
+#
